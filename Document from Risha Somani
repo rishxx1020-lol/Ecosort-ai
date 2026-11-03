@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#123b2c">
+<title>EcoSort AI | Waste Classifier</title>
+<style>
+:root{--forest:#123b2c;--green:#1f7651;--mint:#eaf5ee;--ink:#17251e;--muted:#66756d;--line:#dce8df;--white:#fff}
+*{box-sizing:border-box}
+body{margin:0;background:#f4f8f4;color:var(--ink);font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif}
+header{background:var(--forest);color:white;padding:clamp(18px,4vw,34px) clamp(18px,5vw,60px);display:flex;align-items:center;justify-content:space-between;gap:16px}
+.brand{display:flex;align-items:center;gap:12px}.logo{width:44px;height:44px;border-radius:14px;background:#d7f0df;color:var(--forest);display:grid;place-items:center;font-size:25px}
+h1{font-size:clamp(21px,3vw,30px);margin:0;letter-spacing:-.6px}.tag{font-size:12px;opacity:.78;margin-top:3px}
+#fullscreen{border:1px solid #ffffff66;background:#ffffff12;color:white;border-radius:12px;padding:10px 14px;font-weight:650}
+main{max-width:1100px;margin:auto;padding:clamp(18px,4vw,42px)}
+.intro{margin-bottom:22px}.eyebrow{color:var(--green);font-size:12px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase}
+h2{font-size:clamp(25px,4vw,36px);margin:7px 0 6px;letter-spacing:-1px}.intro p{color:var(--muted);margin:0;line-height:1.55}
+.layout{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(280px,.9fr);gap:20px}
+.panel{background:var(--white);border:1px solid var(--line);border-radius:22px;padding:clamp(16px,3vw,25px);box-shadow:0 8px 28px #163b2410}
+.panel h3{margin:0 0 5px;font-size:18px}.sub{color:var(--muted);font-size:13px;margin:0 0 17px}
+.preview{background:#f0f5f1;border:1px dashed #b8cbbd;border-radius:16px;min-height:270px;display:grid;place-items:center;overflow:hidden;position:relative}
+.preview img,.preview canvas{max-width:100%;max-height:430px;object-fit:contain;display:block}
+.placeholder{text-align:center;padding:25px;color:var(--muted)}.placeholder .big{font-size:46px;display:block;margin-bottom:8px}
+.actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:15px}
+button,.upload-label{font:inherit;font-size:14px;font-weight:700;border:0;border-radius:12px;padding:12px 16px;cursor:pointer}
+.primary{background:var(--green);color:white}.secondary,.upload-label{background:var(--mint);color:var(--forest)}button:disabled{opacity:.5;cursor:not-allowed}
+input[type=file]{display:none}.status{font-size:12px;color:var(--muted);margin-top:13px;min-height:18px}
+.result-top{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:16px}
+.pill{background:var(--mint);color:var(--green);border-radius:99px;padding:6px 10px;font-size:11px;font-weight:800}
+#topResult{background:#f4f8f4;border-radius:16px;padding:17px;margin-bottom:18px}
+#topName{font-size:22px;font-weight:800;margin:0 0 3px}#topConfidence{font-size:13px;color:var(--muted)}
+.prediction{margin:14px 0}.pred-head{display:flex;justify-content:space-between;gap:10px;font-size:13px;margin-bottom:7px}.bar{height:10px;background:#edf2ee;border-radius:20px;overflow:hidden}.fill{height:100%;width:0;background:var(--green);border-radius:20px;transition:width .25s}
+#predictions{min-height:130px}.empty{color:var(--muted);font-size:13px;line-height:1.5;padding:15px 0}
+footer{text-align:center;color:var(--muted);font-size:12px;padding:25px}
+@media(max-width:760px){.layout{grid-template-columns:1fr}.preview{min-height:230px}header{align-items:flex-start}#fullscreen{white-space:nowrap}}
+</style>
+</head>
+<body>
+<header>
+ <div class="brand"><div class="logo">♻</div><div><h1>EcoSort AI</h1><div class="tag">SMART WASTE CLASSIFICATION</div></div></div>
+ <button id="fullscreen" type="button">⛶ Full screen</button>
+</header>
+<main>
+ <section class="intro"><div class="eyebrow">AI-powered waste sorting</div><h2>Give waste a smarter next step.</h2><p>Show an item to the camera or upload a photo to see which waste category your trained AI model predicts.</p></section>
+ <div class="layout">
+  <section class="panel">
+   <h3>Scan an item</h3><p class="sub">Use the tablet camera or choose a clear photo.</p>
+   <div class="preview" id="preview">
+    <div class="placeholder" id="placeholder"><span class="big">📷</span><strong>Your item preview appears here</strong><div style="font-size:12px;margin-top:5px">Keep one item in the centre of the frame</div></div>
+    <img id="photo" alt="Selected waste item" hidden>
+   </div>
+   <div class="actions">
+    <button class="primary" id="startCamera">Start camera</button>
+    <button class="secondary" id="stopCamera" disabled>Stop camera</button>
+    <label class="upload-label" for="fileInput">Upload image</label>
+    <input id="fileInput" type="file" accept="image/*">
+   </div>
+   <div class="status" id="status">Loading your trained AI model…</div>
+  </section>
+  <section class="panel">
+   <div class="result-top"><div><h3>Classification result</h3><p class="sub" style="margin:4px 0 0">Live prediction from your model</p></div><span class="pill" id="modelState">LOADING</span></div>
+   <div id="topResult"><div id="topName">Waiting for an item</div><div id="topConfidence">Start the camera or upload an image.</div></div>
+   <div id="predictions"><div class="empty">Your category confidence scores will appear here after scanning an item.</div></div>
+  </section>
+ </div>
+</main>
+<footer>EcoSort AI · A student-built waste classification project</footer>
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@1.3.1/dist/tf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@0.8.3/dist/teachablemachine-image.min.js"></script>
+<script>
+const MODEL_URL = "https://teachablemachine.withgoogle.com/models/MUyKLCQyG/";
+let model, webcam, running = false, busy = false;
+const $ = id => document.getElementById(id);
+const statusEl = $("status");
+function niceName(name){
+ const n = name.toLowerCase().replace(/[_–—]/g,"-");
+ if(n.includes("non") && n.includes("recycl")) return "Non-recyclable";
+ if(n.includes("bio")) return "Biodegradable";
+ if(n.includes("recycl")) return "Recyclable";
+ if(n.includes("e-waste") || n.includes("ewaste") || n.includes("electronic")) return "E-waste";
+ return name;
+}
+function showPredictions(preds){
+ const sorted = [...preds].sort((a,b)=>b.probability-a.probability);
+ const best = sorted[0];
+ $("topName").textContent = niceName(best.className);
+ $("topConfidence").textContent = (best.probability*100).toFixed(1)+"% model confidence";
+ $("predictions").innerHTML = "";
+ sorted.forEach(p=>{
+  const row=document.createElement("div"); row.className="prediction";
+  const head=document.createElement("div"); head.className="pred-head";
+  const label=document.createElement("strong"); label.textContent=niceName(p.className);
+  const pct=document.createElement("span"); pct.textContent=(p.probability*100).toFixed(1)+"%";
+  head.append(label,pct);
+  const bar=document.createElement("div"); bar.className="bar";
+  const fill=document.createElement("div"); fill.className="fill"; fill.style.width=(p.probability*100)+"%";
+  bar.append(fill); row.append(head,bar); $("predictions").append(row);
+ });
+}
+async function loadModel(){
+ try{
+  if(!window.tmImage) throw new Error("The AI library did not load. Check your internet connection and reload.");
+  model=await tmImage.load(MODEL_URL+"model.json",MODEL_URL+"metadata.json");
+  $("modelState").textContent="MODEL READY"; statusEl.textContent="AI model ready. Start the camera or upload a photo.";
+ }catch(e){$("modelState").textContent="MODEL ERROR";statusEl.textContent="Could not load model: "+e.message;}
+}
+async function classifyImage(img){
+ if(!model) return;
+ try{statusEl.textContent="Analysing image…";const p=await model.predict(img);showPredictions(p);statusEl.textContent="Scan complete. Try another item whenever you're ready.";}
+ catch(e){statusEl.textContent="Could not analyse this image: "+e.message;}
+}
+$("fileInput").addEventListener("change",e=>{
+ const file=e.target.files && e.target.files[0]; if(!file)return;
+ if(!file.type.startsWith("image/")){statusEl.textContent="Please choose an image file.";return;}
+ const url=URL.createObjectURL(file), img=$("photo");
+ img.onload=()=>{ $("placeholder").hidden=true;img.hidden=false; if(running) stopCamera(); classifyImage(img); URL.revokeObjectURL(url); };
+ img.src=url;
+});
+async function startCamera(){
+ if(!model){statusEl.textContent="The model is still loading. Please wait.";return;}
+ try{
+  $("startCamera").disabled=true;statusEl.textContent="Requesting camera permission…";
+  webcam=new tmImage.Webcam(480,360,true);
+  await webcam.setup({facingMode:"environment"});
+  await webcam.play(); running=true;
+  $("photo").hidden=true;$("placeholder").hidden=true;
+  const old=$("cameraCanvas");if(old)old.remove();
+  webcam.canvas.id="cameraCanvas";$("preview").appendChild(webcam.canvas);
+  $("stopCamera").disabled=false;statusEl.textContent="Camera is on. Hold one item in view.";
+  window.requestAnimationFrame(cameraLoop);
+ }catch(e){$("startCamera").disabled=false;statusEl.textContent="Camera could not start. Allow camera permission in Chrome, or use Upload image. ("+e.message+")";}
+}
+async function cameraLoop(){
+ if(!running || !webcam)return;
+ webcam.update();
+ if(!busy && model){busy=true;try{showPredictions(await model.predict(webcam.canvas));}catch(e){}finally{busy=false;}}
+ window.requestAnimationFrame(cameraLoop);
+}
+function stopCamera(){
+ running=false;
+ if(webcam){try{webcam.stop();}catch(e){}webcam=null;}
+ const c=$("cameraCanvas");if(c)c.remove();
+ $("stopCamera").disabled=true;$("startCamera").disabled=false;
+ $("placeholder").hidden=false;$("photo").hidden=true;
+ statusEl.textContent="Camera stopped. Start it again or upload an image.";
+}
+$("startCamera").addEventListener("click",startCamera);
+$("stopCamera").addEventListener("click",stopCamera);
+$("fullscreen").addEventListener("click",async()=>{
+ try{if(!document.fullscreenElement) await document.documentElement.requestFullscreen();else await document.exitFullscreen();}
+ catch(e){statusEl.textContent="Full screen is not available in this browser. Try Chrome's menu or rotate the tablet.";}
+});
+loadModel();
+</script>
+</body>
+</html>
